@@ -44,42 +44,34 @@ Bob asks Alice for her public key.
 Bob generates a 32-byte nonce and sends its SHA-256 and the following contract (on BTC) to Alice to verify, along with his public key.
 ```
 OP_IF
-  OP_SHA256
-  <hash of nonce>
-  OP_EQUALVERIFY
-  <pubKeyA>
-  OP_CHECKSIG
+  OP_SHA256 <hash of nonce> OP_EQUALVERIFY
+  <pubKeyA> OP_CHECKSIG
 OP_ELSE
-  <locktime1>
-  OP_CHECKSEQUENCEVERIFY
-  OP_DROP
-  <pubKeyB>
-  OP_CHECKSIG
+  <locktime1> OP_CHECKSEQUENCEVERIFY OP_DROP
+  <pubKeyB> OP_CHECKSIG
 OP_ENDIF
 ```
 Bob also sends 1 BTC to this address and broadcasts the transaction.
 ### Step 3
-Alice waits 3 blocks for this transaction to confirm on the BTC blockchain and then creates the following contract (on HNS):
+Alice creates the following contract (on HNS):
 ```
 OP_IF
   OP_SIZE 32 OP_EQUALVERIFY 
-  OP_SHA256
-  <hash of nonce>
-  OP_EQUALVERIFY
-  <pubKeyB>
-  OP_CHECKSIG
+  OP_SHA256 <hash of nonce> OP_EQUALVERIFY
+  OP_2 <pubkeyA> <pubKeyB> OP_2 OP_CHECKMULTISIG
 OP_ELSE
-  <locktime2>
-  OP_CHECKSEQUENCEVERIFY
-  OP_DROP
-  <pubKeyA>
-  OP_CHECKSIG
+  <locktime2> OP_CHECKSEQUENCEVERIFY OP_DROP
+  <pubKeyA> OP_CHECKSIG
 OP_ENDIF
 ```
 Where locktime1 < locktime2 (to ensure Alice has time to claim BTC after the nonce is revealed)
-Alice also sends her 100 HNS to this address. (With the signature from the trusted third party, she can keep any excess change)
+Alice also sends her 100 HNS to this address. (After awaiting a appropriate amount of time, 1 Block is enough) (With the signature from the trusted third party, she can keep any excess change)
+
+A multisig is used here to allow Alice not to have to wait 3 blocks for Bob's transaction to confirm.
 ### Step 4
-Bob waits 3 confirmations and then transfers the 100 HNS on his address by revealing the nonce, Alice monitors the chain for a transaction revealing the nonce and claims 1 BTC.
+Alice and Bob wait 3 confirmations (for both their transfers to confirm). Bob then creates a transaction transferring the 100 HNS on his address (but does not sign/reveal the nonce), and asks for Alice's signature. On recieving the signature, he verifies it, and then spends it revealing the nonce.
+
+Alice monitors the chain for a transaction revealing the nonce and claims 1 BTC.
 (Alice can also presign a transaction and store it in a watchtower to do it for her)
 
 Bob should now have 100 HNS - 1x (HNS tx fee) in his wallet.
@@ -120,7 +112,12 @@ Cryptography and Browsers don't mix well. There are many ways extensions can int
 ## Privacy
 Due to the shared nonce, Cross chain atomic swaps aren't private. However, unlike centralized exchanges there is no need for a KYC. So cross chain atomic swaps are attractive for those wanting to maximize their privacy but don't really care about chain analysis.
 
-However, it is possible to have more private atomic swaps with the use of L2 networks, but is outside the scope of this project.
+However, it is possible to have more private atomic swaps using Adaptor Signatures, but is outside the scope of this project.
+
+## Potential Improvements
+There are a few ways this protcol can be improved 
+1. Use of Adaptor signatures - Increase privacy, remove the need for a common hashing algorithm, Complicated to implement.
+2. Advanced knowledge of tx_hash of funding transactions will allow reduction size of the BTC contract by 30% (By the use of a presigned refund tx). 
 
 ## References:
 <a id="ref"></a> 
