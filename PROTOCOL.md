@@ -18,16 +18,13 @@ This mnemonic (combined with some other information) will be needed to refund fu
 Alice fills in trade parameters (Amount and Exchange rate), and generates a link/id to send over to Bob, this id will let Bob connect to Alice over WebRTC (using PeerJS). Bob can choose to reject the trade if he doesn't agree with the trade parameters.
 
 ### Step 1
-Alice creates the following contract:
+Alice creates the following contract (on HNS):
 ```
 OP_IF
   OP_2 <pubKeyC> <pubKeyA> OP_2 OP_CHECKMULTISIG
 OP_ELSE
-  <penalty locktime>
-  OP_CHECKSEQUENCEVERIFY
-  OP_DROP
-  <pubKeyA>
-  OP_CHECKSIG
+  <penalty locktime> OP_CHECKSEQUENCEVERIFY OP_DROP
+  <pubKeyA> OP_CHECKSIG
 OP_ENDIF
 ```
 Where pubKeyC is the public key of a trusted third party (C),
@@ -35,7 +32,7 @@ This allows the output to be spent by two paths:
 1. From a multisignature from both C and A.
 2. By A alone after the locktime has passed.
 
-Alice then sends > 100 HNS + (predicted fee) to this address, and sends the tx (with the redeem script) to Bob to verify, Bob waits for 1 confirmation.
+Alice then sends > 100 HNS + (predicted fee) to this address. Carol signals to Bob this step has been done. (One can attempt to make this more trustless, but it doesn't matter)
 
 This step is *optional* (but recommended) to combat liquidity trolling.
 
@@ -51,7 +48,7 @@ OP_ELSE
   <pubKeyB> OP_CHECKSIG
 OP_ENDIF
 ```
-Bob also sends 1 BTC to this address and broadcasts the transaction.
+Bob also sends 1 BTC to this address and broadcasts the transaction. Ideally opting out of RBF.
 ### Step 3
 Alice creates the following contract (on HNS):
 ```
@@ -65,7 +62,7 @@ OP_ELSE
 OP_ENDIF
 ```
 Where locktime1 < locktime2 (to ensure Alice has time to claim BTC after the nonce is revealed)
-Alice also sends her 100 HNS to this address. (After awaiting a appropriate amount of time, 1 Block is enough) (With the signature from the trusted third party, she can keep any excess change)
+Alice also sends her 100 HNS to this address. (After awaiting a appropriate amount of time, if the other person opted out of RBF - In mempool, else till 1 confirmation) (With the signature from the trusted third party, she can keep any excess change)
 
 A multisig is used here to allow Alice not to have to wait 3 blocks for Bob's transaction to confirm.
 ### Step 4
@@ -91,7 +88,7 @@ The following timelocks are used:
 ### Liquidity Trolling
 
 If step 1 is skipped, there is no incentive for Alice to stay after Step 2, which would mean Bob's funds are effectively locked for <locktime> duration at no expense to Alice, having a trusted 3rd party that both users trust can allow us to punish Alice if she leaves after step 2.
-In this case, Alice's funds can be reversed to her in case Bob leaves after step 2, at the cost of 2x TX fee to her.
+Alice's funds can be reversed to her in case Bob leaves after step 2, at the cost of 2x TX fee to her.
 
 ### Nonce size attack
 On some chains length of nonce can be selected by Bob in such a way that it is not possible to claim it in one of the chains, while is the other way around [[3]](#ref). This isn't strictly a problem with HNS and BTC since both have a 520 byte limit element size, but the length check is still kept in for security reasons.
